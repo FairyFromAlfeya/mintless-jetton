@@ -50,14 +50,6 @@ export class JettonWallet implements Contract {
     return new JettonWallet(contractAddress(workchain, init), init);
   }
 
-  async sendDeploy(provider: ContractProvider, via: Sender, value: bigint) {
-    await provider.internal(via, {
-      value,
-      sendMode: SendMode.PAY_GAS_SEPARATELY,
-      body: beginCell().endCell(),
-    });
-  }
-
   async getWalletData(provider: ContractProvider) {
     let { stack } = await provider.get("get_wallet_data", []);
     return {
@@ -75,14 +67,7 @@ export class JettonWallet implements Contract {
     let res = await provider.get("get_wallet_data", []);
     return res.stack.readBigNumber();
   }
-  async getWalletStatus(provider: ContractProvider) {
-    let state = await provider.getState();
-    if (state.state.type !== "active") {
-      return 0;
-    }
-    let res = await provider.get("get_status", []);
-    return res.stack.readNumber();
-  }
+
   static claimPayload(proof: Cell) {
     return beginCell().storeUint(Op.airdrop_claim, 32).storeRef(proof).endCell();
   }

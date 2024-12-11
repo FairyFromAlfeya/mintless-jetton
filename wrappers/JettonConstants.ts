@@ -20,8 +20,6 @@ export abstract class Op {
 }
 
 export abstract class Errors {
-  static invalid_op = 72;
-  static wrong_op = 0xffff;
   static not_owner = 73;
   static not_valid_wallet = 74;
   static wrong_workchain = 333;
@@ -34,7 +32,6 @@ export abstract class Errors {
   static not_exotic = 103;
   static not_merkle_proof = 104;
   static wrong_hash = 105;
-  static leaf_not_found = 108;
 
   static balance_error = 47;
   static not_enough_gas = 48;

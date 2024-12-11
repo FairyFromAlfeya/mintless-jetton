@@ -8,10 +8,7 @@ export function librarianConfigToCell(config: LibrarianConfig): Cell {
   return config.code;
 }
 export class Librarian implements Contract {
-  constructor(
-    readonly address: Address,
-    readonly init?: { code: Cell; data: Cell },
-  ) {}
+  constructor(readonly address: Address) {}
 
   async sendDeploy(provider: ContractProvider, via: Sender, value: bigint) {
     await provider.internal(via, {
@@ -20,13 +17,9 @@ export class Librarian implements Contract {
     });
   }
 
-  static createFromAddress(address: Address) {
-    return new Librarian(address);
-  }
-
   static createFromConfig(config: LibrarianConfig, code: Cell, workchain = -1) {
     const data = librarianConfigToCell(config);
     const init = { code, data };
-    return new Librarian(contractAddress(workchain, init), init);
+    return new Librarian(contractAddress(workchain, init));
   }
 }

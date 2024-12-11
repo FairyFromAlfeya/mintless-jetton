@@ -6,7 +6,6 @@ import { base64Decode } from "@ton/sandbox/dist/utils/base64";
 import { toUnits } from "./units";
 
 export const defaultJettonKeys = ["uri", "name", "description", "image", "image_data", "symbol", "decimals", "amount_style"];
-export const defaultNftKeys = ["uri", "name", "description", "image", "image_data"];
 
 export const promptBool = async (prompt: string, options: [string, string], ui: UIProvider, choice: boolean = false) => {
   let yes = false;
@@ -51,19 +50,17 @@ export const promptToncoin = async (prompt: string, provider: UIProvider) => {
 
 export const promptAmount = async (prompt: string, decimals: number, provider: UIProvider) => {
   let resAmount: bigint;
+
   do {
     const inputAmount = await provider.input(prompt);
-    try {
-      resAmount = toUnits(inputAmount, decimals);
 
-      if (resAmount <= 0) {
-        throw new Error("Please enter positive number");
-      }
+    resAmount = toUnits(inputAmount, decimals);
 
+    if (resAmount > 0) {
       return resAmount;
-    } catch (e: any) {
-      provider.write(e.message);
     }
+
+    provider.write("Error: Please enter positive number");
   } while (true);
 };
 
@@ -91,13 +88,6 @@ export const waitForTransaction = async (provider: NetworkProvider, address: Add
     }
   } while (!done && count < maxRetry);
   return done;
-};
-
-const keysToHashMap = async (keys: string[]) => {
-  let keyMap: { [key: string]: bigint } = {};
-  for (let i = 0; i < keys.length; i++) {
-    keyMap[keys[i]] = BigInt("0x" + (await sha256(keys[i])).toString("hex"));
-  }
 };
 
 const contentValue: DictionaryValue<string> = {
@@ -130,11 +120,9 @@ export const parseContentCell = async (content: Cell) => {
     if (noData && cs.remainingRefs == 0) {
       throw new Error("No data in content cell!");
     } else {
-      const contentUrl = noData ? cs.loadStringRefTail() : cs.loadStringTail();
-      return contentUrl;
+      return noData ? cs.loadStringRefTail() : cs.loadStringTail();
     }
   } else if (contentType == 0) {
-    let contentKeys: string[];
     const contentDict = Dictionary.load(Dictionary.Keys.BigUint(256), contentValue, cs);
     const contentMap: { [key: string]: string } = {};
 
@@ -152,7 +140,7 @@ export const parseContentCell = async (content: Cell) => {
   }
 };
 
-export const displayContentCell = async (contentCell: Cell, ui: UIProvider, jetton: boolean = true, additional?: string[]) => {
+export const displayContentCell = async (contentCell: Cell, ui: UIProvider) => {
   const content = await parseContentCell(contentCell);
 
   if (content instanceof String) {
@@ -228,7 +216,7 @@ export const sendToIndex = async (method: string, params: any, provider: Network
   const testnetRpc = "https://testnet.toncenter.com/api/v3/";
   const rpc = isTestnet ? testnetRpc : mainnetRpc;
 
-  const apiKey = (provider.api() as any).api.parameters.apiKey!; // todo: provider.api().parameters.apiKey is undefined
+  const apiKey = (provider.api() as any).api.parameters.apiKey!;
 
   const headers = {
     "Content-Type": "application/json",

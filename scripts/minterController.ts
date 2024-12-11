@@ -259,30 +259,6 @@ const updateMerkleRoot = async (provider: NetworkProvider, ui: UIProvider) => {
   }
 };
 
-type AccountStateLite = any;
-type AccountStateFull = any;
-
-const matchCodeLite = (contractState: AccountStateLite, code: Cell) => {
-  let equals = false;
-
-  if (contractState.account.state.type === "active") {
-    const codeHash = code.hash();
-    equals = codeHash.equals(Buffer.from(contractState.account.state.codeHash, "base64"));
-  }
-
-  return equals;
-};
-
-const matchCodeFull = (contractState: AccountStateFull, code: Cell) => {
-  let equals = false;
-  if (contractState.account.state.type === "active") {
-    if (contractState.account.state.code !== null) {
-      equals = code.equals(Cell.fromBase64(contractState.account.state.code));
-    }
-  }
-  return equals;
-};
-
 export async function run(provider: NetworkProvider) {
   const ui = provider.ui();
   const sender = provider.sender();

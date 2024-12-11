@@ -1,12 +1,11 @@
-import { Blockchain, SandboxContract, TreasuryContract, internal, BlockchainSnapshot, SendMessageResult, BlockchainTransaction } from "@ton/sandbox";
-import { Cell, toNano, beginCell, Address, Dictionary, fromNano } from "@ton/core";
+import { Blockchain, SandboxContract, TreasuryContract } from "@ton/sandbox";
+import { Cell, toNano, beginCell, Address, Dictionary } from "@ton/core";
 import "@ton/test-utils";
 import { compile } from "@ton/blueprint";
 import { JettonMinterTest } from "../wrappers/JettonMinterTest";
 import { JettonWallet } from "../wrappers/JettonWallet";
 import { jettonContentToCell } from "../wrappers/JettonMinter";
 import { getSecureRandomBytes } from "@ton/crypto";
-import { getRandomInt } from "./utils";
 
 describe("SameShard", () => {
   let blockchain: Blockchain;
@@ -24,8 +23,7 @@ describe("SameShard", () => {
 
     const _libs = Dictionary.empty(Dictionary.Keys.BigUint(256), Dictionary.Values.Cell());
     _libs.set(BigInt(`0x${wallet_code.hash().toString("hex")}`), wallet_code);
-    const libs = beginCell().storeDictDirect(_libs).endCell();
-    blockchain.libs = libs;
+    blockchain.libs = beginCell().storeDictDirect(_libs).endCell();
     let lib_prep = beginCell().storeUint(2, 8).storeBuffer(wallet_code.hash()).endCell();
     const jwallet_code = new Cell({ exotic: true, bits: lib_prep.bits, refs: lib_prep.refs });
     merkleRoot = BigInt("0x" + (await getSecureRandomBytes(32)).toString("hex"));
@@ -63,7 +61,7 @@ describe("SameShard", () => {
       try {
         const testAddress = new Address(0, await getSecureRandomBytes(32));
         const testJetton = await userWallet(testAddress);
-        const mintResult = await jettonMinter.sendMint(deployer.getSender(), testAddress, mintAmount, null, null, null, toNano("0.05"), toNano("1"));
+        await jettonMinter.sendMint(deployer.getSender(), testAddress, mintAmount, null, null, null, toNano("0.05"), toNano("1"));
         expect(await testJetton.getJettonBalance()).toEqual(mintAmount);
         expect(testJetton.address.hash[0] >> 4).toEqual(testAddress.hash[0] >> 4);
         successCount++;
@@ -75,7 +73,7 @@ describe("SameShard", () => {
   it("should create wallet in closest shard on transfer", async () => {
     const mintAmount = toNano("1000");
     const deployerJetton = await userWallet(deployer.address);
-    const mintResult = await jettonMinter.sendMint(deployer.getSender(), deployer.address, mintAmount, null, null, null, toNano("0.05"), toNano("1"));
+    await jettonMinter.sendMint(deployer.getSender(), deployer.address, mintAmount, null, null, null, toNano("0.05"), toNano("1"));
     let successCount = 0;
 
     for (let i = 0; i < 100; i++) {

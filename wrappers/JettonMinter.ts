@@ -39,10 +39,6 @@ export function jettonMinterConfigCellToConfig(config: Cell): JettonMinterConfig
   return parsed;
 }
 
-export function parseJettonMinterData(data: Cell): JettonMinterConfigFull {
-  return jettonMinterConfigCellToConfig(data);
-}
-
 export function jettonMinterConfigFullToCell(config: JettonMinterConfigFull): Cell {
   const content = config.jetton_content instanceof Cell ? config.jetton_content : jettonContentToCell(config.jetton_content);
   return beginCell()
@@ -130,42 +126,6 @@ export class JettonMinter implements Contract {
       .endCell();
   }
 
-  static parseMintInternalMessage(slice: Slice) {
-    const op = slice.loadUint(32);
-    if (op !== Op.internal_transfer) throw new Error("Invalid op");
-    const queryId = slice.loadUint(64);
-    const jettonAmount = slice.loadCoins();
-    const fromAddress = slice.loadAddress();
-    const responseAddress = slice.loadAddress();
-    const forwardTonAmount = slice.loadCoins();
-    const customPayload = slice.loadMaybeRef();
-    endParse(slice);
-    return {
-      queryId,
-      jettonAmount,
-      fromAddress,
-      responseAddress,
-      forwardTonAmount,
-      customPayload,
-    };
-  }
-
-  static parseMintMessage(slice: Slice) {
-    const op = slice.loadUint(32);
-    if (op !== Op.mint) throw new Error("Invalid op");
-    const queryId = slice.loadUint(64);
-    const toAddress = slice.loadAddress();
-    const tonAmount = slice.loadCoins();
-    const mintMsg = slice.loadRef();
-    endParse(slice);
-    return {
-      queryId,
-      toAddress,
-      tonAmount,
-      internalMessage: this.parseMintInternalMessage(mintMsg.beginParse()),
-    };
-  }
-
   async sendMint(
     provider: ContractProvider,
     via: Sender,
@@ -210,16 +170,6 @@ export class JettonMinter implements Contract {
       .endCell();
   }
 
-  static parseTopUp(slice: Slice) {
-    const op = slice.loadUint(32);
-    if (op !== Op.top_up) throw new Error("Invalid op");
-    const queryId = slice.loadUint(64);
-    endParse(slice);
-    return {
-      queryId,
-    };
-  }
-
   async sendTopUp(provider: ContractProvider, via: Sender, value: bigint = toNano("0.1")) {
     await provider.internal(via, {
       sendMode: SendMode.PAY_GAS_SEPARATELY,
@@ -236,18 +186,6 @@ export class JettonMinter implements Contract {
       .endCell();
   }
 
-  static parseChangeAdmin(slice: Slice) {
-    const op = slice.loadUint(32);
-    if (op !== Op.change_admin) throw new Error("Invalid op");
-    const queryId = slice.loadUint(64);
-    const newAdminAddress = slice.loadAddress();
-    endParse(slice);
-    return {
-      queryId,
-      newAdminAddress,
-    };
-  }
-
   async sendChangeAdmin(provider: ContractProvider, via: Sender, newOwner: Address) {
     await provider.internal(via, {
       sendMode: SendMode.PAY_GAS_SEPARATELY,
@@ -258,16 +196,6 @@ export class JettonMinter implements Contract {
 
   static claimAdminMessage(query_id: bigint = 0n) {
     return beginCell().storeUint(Op.claim_admin, 32).storeUint(query_id, 64).endCell();
-  }
-
-  static parseClaimAdmin(slice: Slice) {
-    const op = slice.loadUint(32);
-    if (op !== Op.claim_admin) throw new Error("Invalid op");
-    const queryId = slice.loadUint(64);
-    endParse(slice);
-    return {
-      queryId,
-    };
   }
 
   async sendClaimAdmin(provider: ContractProvider, via: Sender, query_id: bigint = 0n) {
@@ -281,17 +209,7 @@ export class JettonMinter implements Contract {
   static dropAdminMessage(query_id: number | bigint) {
     return beginCell().storeUint(Op.drop_admin, 32).storeUint(query_id, 64).endCell();
   }
-  static parseDropAdmin(slice: Slice) {
-    const op = slice.loadUint(32);
-    if (op !== Op.drop_admin) {
-      throw new Error("Invalid op");
-    }
-    const queryId = slice.loadUint(64);
-    endParse(slice);
-    return {
-      queryId,
-    };
-  }
+
   async sendDropAdmin(provider: ContractProvider, via: Sender, value: bigint = toNano("0.05"), query_id: number | bigint = 0) {
     await provider.internal(via, {
       sendMode: SendMode.PAY_GAS_SEPARATELY,
@@ -309,18 +227,6 @@ export class JettonMinter implements Contract {
       .endCell();
   }
 
-  static parseChangeContent(slice: Slice) {
-    const op = slice.loadUint(32);
-    if (op !== Op.change_metadata_url) throw new Error("Invalid op");
-    const queryId = slice.loadUint(64);
-    const newMetadataUrl = slice.loadStringTail();
-    endParse(slice);
-    return {
-      queryId,
-      newMetadataUrl,
-    };
-  }
-
   async sendChangeContent(provider: ContractProvider, via: Sender, content: Cell | JettonMinterContent) {
     await provider.internal(via, {
       sendMode: SendMode.PAY_GAS_SEPARATELY,
@@ -329,60 +235,8 @@ export class JettonMinter implements Contract {
     });
   }
 
-  static parseTransfer(slice: Slice) {
-    const op = slice.loadUint(32);
-    if (op !== Op.transfer) throw new Error("Invalid op");
-    const queryId = slice.loadUint(64);
-    const jettonAmount = slice.loadCoins();
-    const toAddress = slice.loadAddress();
-    const responseAddress = slice.loadAddress();
-    const customPayload = slice.loadMaybeRef();
-    const forwardTonAmount = slice.loadCoins();
-    const inRef = slice.loadBit();
-    const forwardPayload = inRef ? slice.loadRef().beginParse() : slice;
-    return {
-      queryId,
-      jettonAmount,
-      toAddress,
-      responseAddress,
-      customPayload,
-      forwardTonAmount,
-      forwardPayload,
-    };
-  }
-
-  static parseBurn(slice: Slice) {
-    const op = slice.loadUint(32);
-    if (op !== Op.burn) throw new Error("Invalid op");
-    const queryId = slice.loadUint(64);
-    const jettonAmount = slice.loadCoins();
-    const responseAddress = slice.loadAddress();
-    const customPayload = slice.loadMaybeRef();
-    endParse(slice);
-    return {
-      queryId,
-      jettonAmount,
-      responseAddress,
-      customPayload,
-    };
-  }
-
   static upgradeMessage(new_code: Cell, new_data: Cell, query_id: bigint | number = 0) {
     return beginCell().storeUint(Op.upgrade, 32).storeUint(query_id, 64).storeRef(new_data).storeRef(new_code).endCell();
-  }
-
-  static parseUpgrade(slice: Slice) {
-    const op = slice.loadUint(32);
-    if (op !== Op.upgrade) throw new Error("Invalid op");
-    const queryId = slice.loadUint(64);
-    const newData = slice.loadRef();
-    const newCode = slice.loadRef();
-    endParse(slice);
-    return {
-      queryId,
-      newData,
-      newCode,
-    };
   }
 
   async sendUpgrade(provider: ContractProvider, via: Sender, new_code: Cell, new_data: Cell, value: bigint = toNano("0.1"), query_id: bigint | number = 0) {

@@ -259,7 +259,7 @@ describe("Claim tests", () => {
     let randomOp: number;
 
     do {
-      randomOp = getRandomInt(0, (1 << 32) - 1);
+      randomOp = getRandomInt(0, (1 << 0) - 1);
     } while (randomOp == Op.airdrop_claim);
 
     const ops = [Op.transfer, Op.burn, randomOp];

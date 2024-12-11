@@ -1,4 +1,4 @@
-import { Address, beginCell, Cell, Dictionary, DictionaryValue, toNano } from "@ton/core";
+import { Address, beginCell, Dictionary, DictionaryValue, toNano } from "@ton/core";
 import { compile, NetworkProvider } from "@ton/blueprint";
 import { jettonWalletCodeFromLibrary, promptUrl, promptUserFriendlyAddress } from "../wrappers/ui-utils";
 
@@ -36,14 +36,6 @@ const airDropValue: DictionaryValue<AirdropData> = {
     };
   },
 };
-
-function convertToMerkleProof(c: Cell): Cell {
-  return beginCell().storeUint(3, 8).storeBuffer(c.hash(0)).storeUint(c.depth(0), 16).storeRef(c).endCell({ exotic: true });
-}
-
-function convertToPrunedBranch(c: Cell): Cell {
-  return beginCell().storeUint(1, 8).storeUint(1, 8).storeBuffer(c.hash(0)).storeUint(c.depth(0), 16).endCell({ exotic: true });
-}
 
 // for P packages it generates 3 * N wallets of each kind
 // for each wallet it generates airdrop data with random amount from toNano("1") to toNano("23"), start_from = AIRDROP_START

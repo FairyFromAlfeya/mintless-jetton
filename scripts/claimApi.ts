@@ -13,14 +13,14 @@ it exposes method `/wallet/:address`:
 `/wallet/:address`
 
 `address` is raw encoded addr_std of jetton_wallet owner (NOT jetton_wallet address). (example: `0:1234567890absdef1234567890absdef1234567890absdef1234567890absdef`)
-Returns full information about a particular wallet including the `CustomPayload` that should be attchaed to transfer.
+Returns full information about a particular wallet including the `CustomPayload` that should be attached to transfer.
 
 MUST return a JSON object with the following fields:
 
 | Name           | Type   | Description                                                                                      |
 |----------------|--------|--------------------------------------------------------------------------------------------------|
 | owner          | string | wallet owner address in raw form                                                                 |
-| jetton_wallet  | string | jetton_wallet address in raw form      TODO: maybe should be removed to avoid incositency in API |
+| jetton_wallet  | string | jetton_wallet address in raw form                                                                |
 | custom_payload | string | Custom payload which wallet MUST attach to transfer message. Serialized as base64 BoC            |
 
 MUST return some field in specific cases:
