@@ -1,19 +1,12 @@
-import { Address, beginCell, BitBuilder, Cell, Dictionary, DictionaryValue, exoticMerkleProof, exoticPruned, toNano, internal, storeStateInit } from '@ton/core';
-import {compile, NetworkProvider} from '@ton/blueprint';
-//import { MnemonicProvider } from '@ton/blueprint';
-import {jettonWalletCodeFromLibrary, promptUrl, promptUserFriendlyAddress} from "../wrappers/ui-utils";
+import { Address, beginCell, Cell, Dictionary, DictionaryValue, storeStateInit } from "@ton/core";
+import { compile } from "@ton/blueprint";
+import { jettonWalletCodeFromLibrary } from "../wrappers/ui-utils";
 
-import { WalletContractV3R2, WalletContractV4, WalletContractV5R1 } from "@ton/ton";
-import { mnemonicNew, mnemonicToPrivateKey } from "@ton/crypto";
+import "@ton/test-utils";
+import { JettonWallet } from "../wrappers/JettonWallet";
+import { buff2bigint } from "../sandbox_tests/utils";
 
-
-import '@ton/test-utils';
-import {jettonContentToCell, JettonMinter} from '../wrappers/JettonMinter';
-import { JettonWallet, jettonWalletConfigToCell } from '../wrappers/JettonWallet';
-import { buff2bigint} from '../sandbox_tests/utils';
-import { Errors, Op } from '../wrappers/JettonConstants';
-
-declare module 'express';
+declare module "express";
 /*
 We need to write simple server
 it exposes method `/wallet/:address`:
@@ -59,44 +52,46 @@ Example:
 
 // on start this server reads file airdropData.boc
 type AirdropData = {
-    amount: bigint,
-    start_from: number,
-    expire_at: number
+  amount: bigint;
+  start_from: number;
+  expire_at: number;
 };
 
 const airDropValue: DictionaryValue<AirdropData> = {
-    serialize: (src, builder) => {
-        builder.storeCoins(src.amount);
-        builder.storeUint(src.start_from, 48);
-        builder.storeUint(src.expire_at, 48);
-    },
-    parse: (src) => {
-        return {
-            amount: src.loadCoins(),
-            start_from: src.loadUint(48),
-            expire_at: src.loadUint(48)
-        }
-    }
-}
+  serialize: (src, builder) => {
+    builder.storeCoins(src.amount);
+    builder.storeUint(src.start_from, 48);
+    builder.storeUint(src.expire_at, 48);
+  },
+  parse: (src) => {
+    return {
+      amount: src.loadCoins(),
+      start_from: src.loadUint(48),
+      expire_at: src.loadUint(48),
+    };
+  },
+};
 
 // airdropData.boc contains serialized airdrop dictionary
 // read file as Buffer
-const fs = require('fs');
-const airdropDataBuffer = fs.readFileSync('airdropData.boc');
+import fs from "fs";
+const airdropDataBuffer = fs.readFileSync("airdropData.boc");
 // parse buffer to cell
 const airdropCell = Cell.fromBoc(airdropDataBuffer)[0];
 let airdropData = Dictionary.loadDirect(Dictionary.Keys.Address(), airDropValue, airdropCell);
-let merkleRoot    = buff2bigint(airdropCell.hash(0));
+let merkleRoot = buff2bigint(airdropCell.hash(0));
 
 //minter address is stored in file minter.json
-const minterBuffer = fs.readFileSync('minter.json');
+const minterBuffer = fs.readFileSync("minter.json");
 //parse json
 const minterData = JSON.parse(minterBuffer.toString());
 const minter = Address.parse(minterData.address);
 
 let wallet_code_raw = beginCell().endCell();
 
-(async () => { wallet_code_raw = await compile('JettonWallet'); })();
+(async () => {
+  wallet_code_raw = await compile("JettonWallet");
+})();
 const wallet_code = jettonWalletCodeFromLibrary(wallet_code_raw);
 
 /* then necessary data can be extracted from airdropData as
@@ -112,52 +107,55 @@ const wallet_code = jettonWalletCodeFromLibrary(wallet_code_raw);
 */
 
 // start server
-import express from 'express';
-import { Request, Response } from 'express';
+import express from "express";
+import { Request, Response } from "express";
 const app = express();
 const port = 3000;
 
-app.get('/wallet/:address', (req: Request, res: Response) => {
-    let address = req.params.address;
-    let owner = Address.parse(address as string);
-    let airdrop = airdropData.get(owner);
-    if(airdrop === undefined) {
-         res.json({}); // return empty object if no airdrop data for this address
-            return;
-    }
-    let amount = airdrop!.amount;
-    let start_from = airdrop!.start_from;
-    let expire_at = airdrop!.expire_at;
-    let receiverProof = airdropData.generateMerkleProof(owner);
-    //serialize receiverProof: toBoc, then Buffer to base64
-    let serializedProof = receiverProof.toBoc().toString('base64');
-    const claimPayload = JettonWallet.claimPayload(receiverProof);
-    let custom_payload = claimPayload.toBoc().toString('base64');
+app.get("/wallet/:address", (req: Request, res: Response) => {
+  let address = req.params.address;
+  let owner = Address.parse(address as string);
+  let airdrop = airdropData.get(owner);
+  if (airdrop === undefined) {
+    res.json({}); // return empty object if no airdrop data for this address
+    return;
+  }
+  let amount = airdrop!.amount;
+  let start_from = airdrop!.start_from;
+  let expire_at = airdrop!.expire_at;
+  let receiverProof = airdropData.generateMerkleProof([owner]);
+  //serialize receiverProof: toBoc, then Buffer to base64
+  // let serializedProof = receiverProof.toBoc().toString('base64');
+  const claimPayload = JettonWallet.claimPayload(receiverProof);
+  let custom_payload = claimPayload.toBoc().toString("base64");
 
+  let jettonWalletContract = JettonWallet.createFromConfig(
+    {
+      ownerAddress: owner,
+      jettonMasterAddress: minter,
+      merkleRoot: merkleRoot,
+      salt: 0n,
+    },
+    wallet_code,
+  );
 
-    let jettonWalletContract = JettonWallet.createFromConfig({ownerAddress: owner,
-                                                      jettonMasterAddress: minter,
-                                                      merkleRoot: merkleRoot,
-    }, wallet_code);
+  let stateInitB = beginCell();
+  storeStateInit(jettonWalletContract.init!)(stateInitB);
+  let stateInit = stateInitB.endCell();
 
-    let stateInitB = beginCell();
-    storeStateInit(jettonWalletContract.init!)(stateInitB);
-    let stateInit = stateInitB.endCell();
-
-    res.json({
-        owner: owner.toRawString(),
-        jetton_wallet: jettonWalletContract.address.toRawString(),
-        custom_payload,
-        state_init: stateInit.toBoc().toString('base64'),
-        compressed_info: {
-            amount: amount.toString(),
-            start_from: start_from.toString(),
-            expired_at: expire_at.toString()
-        }
-    });
-}
-);
+  res.json({
+    owner: owner.toRawString(),
+    jetton_wallet: jettonWalletContract.address.toRawString(),
+    custom_payload,
+    state_init: stateInit.toBoc().toString("base64"),
+    compressed_info: {
+      amount: amount.toString(),
+      start_from: start_from.toString(),
+      expired_at: expire_at.toString(),
+    },
+  });
+});
 
 app.listen(port, () => {
-    console.log(`Server started at http://localhost:${port}`);
+  console.log(`Server started at http://localhost:${port}`);
 });
