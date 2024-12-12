@@ -64,12 +64,15 @@ export const promptAmount = async (prompt: string, decimals: number, provider: U
   } while (true);
 };
 
-export const getLastBlock = async (provider: NetworkProvider) => {
-  console.log(provider.api());
-  return (await (provider.api() as TonClient4).getLastBlock()).last.seqno;
+export const getLastBlock = async () => {
+  const client = new TonClient4({ endpoint: "https://mainnet-v4.tonhubapi.com" });
+
+  return client.getLastBlock().then((r) => r.last.seqno);
 };
-export const getAccountLastTx = async (provider: NetworkProvider, address: Address) => {
-  const res = await (provider.api() as TonClient4).getAccountLite(await getLastBlock(provider), address);
+export const getAccountLastTx = async (address: Address) => {
+  const client = new TonClient4({ endpoint: "https://mainnet-v4.tonhubapi.com" });
+
+  const res = await client.getAccountLite(await getLastBlock(), address);
   if (res.account.last == null) throw Error("Contract is not active");
   return res.account.last.lt;
 };
@@ -79,10 +82,13 @@ export const waitForTransaction = async (provider: NetworkProvider, address: Add
   const ui = provider.ui();
 
   do {
-    const lastBlock = await getLastBlock(provider);
+    const lastBlock = await getLastBlock();
     ui.write(`Awaiting transaction completion (${++count}/${maxRetry})`);
     await sleep(interval);
-    const curState = await (provider.api() as TonClient4).getAccountLite(lastBlock, address);
+
+    const client = new TonClient4({ endpoint: "https://mainnet-v4.tonhubapi.com" });
+
+    const curState = await client.getAccountLite(lastBlock, address);
     if (curState.account.last !== null) {
       done = curState.account.last.lt !== curTx;
     }
@@ -216,11 +222,11 @@ export const sendToIndex = async (method: string, params: any, provider: Network
   const testnetRpc = "https://testnet.toncenter.com/api/v3/";
   const rpc = isTestnet ? testnetRpc : mainnetRpc;
 
-  const apiKey = (provider.api() as any).api.parameters.apiKey!;
+  // const apiKey = (provider.api() as any).api.parameters.apiKey!;
 
   const headers = {
     "Content-Type": "application/json",
-    "X-API-Key": apiKey,
+    // "X-API-Key": apiKey,
   };
 
   const response = await fetch(rpc + method + "?" + new URLSearchParams(params), {

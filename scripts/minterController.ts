@@ -83,7 +83,7 @@ const changeAdminAction = async (provider: NetworkProvider, ui: UIProvider) => {
     }
   } while (retry);
 
-  const lastTx = await getAccountLastTx(provider, jettonMinterContract.address);
+  const lastTx = await getAccountLastTx(jettonMinterContract.address);
 
   await jettonMinterContract.sendChangeAdmin(provider.sender(), newAdmin);
   const transDone = await waitForTransaction(provider, jettonMinterContract.address, lastTx, 10);
@@ -119,7 +119,7 @@ const claimAdminAction = async (provider: NetworkProvider, ui: UIProvider) => {
     throw new Error("Current admin address is addr_none. No way to change it");
   }
 
-  const lastTx = await getAccountLastTx(provider, jettonMinterContract.address);
+  const lastTx = await getAccountLastTx(jettonMinterContract.address);
 
   await jettonMinterContract.sendClaimAdmin(provider.sender());
 
@@ -153,7 +153,7 @@ const mintAction = async (provider: NetworkProvider, ui: UIProvider) => {
 
   ui.write(`Minting ${fromUnits(mintAmount, decimals)} to ${mintAddress}\n`);
   const supplyBefore = await jettonMinterContract.getTotalSupply();
-  const lastTx = await getAccountLastTx(provider, jettonMinterContract.address);
+  const lastTx = await getAccountLastTx(jettonMinterContract.address);
 
   await jettonMinterContract.sendMint(sender, mintAddress, mintAmount);
   const gotTrans = await waitForTransaction(provider, jettonMinterContract.address, lastTx, 10);
